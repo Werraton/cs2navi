@@ -2,6 +2,8 @@
 
 CS2Navi is a Counter-Strike 2 add-on that provides audio feedback for various in-game states, such as bomb possession, defuse kit collection, and player health. The goal is to give players real-time audio cues to enhance gameplay awareness.
 
+![screenshot](screenshot.png)
+
 ### Features
 
 - Notifies when you pick up the bomb or defuse kit.
