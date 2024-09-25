@@ -1,0 +1,29 @@
+{
+    "low_health_threshold": 30,
+    "low_health_notification_delay": 2,
+    "ammo_threshold_percentage": 25,
+    "volume": 100,
+    "max_plays": {
+        "lowhp": 1,
+        "lowbullets": 5,
+        "picked_up_kit": 1,
+        "kits": 1,
+        "no_kits": 1,
+        "bomb": 1
+    },
+    "enabled_events": {
+        "lowhp": true,
+        "lowbullets": true,
+        "picked_up_kit": true,
+        "kits": true,
+        "no_kits": true,
+        "bomb": true,
+        "low_health": true,
+        "low_ammo": true,
+        "kits_when_bomb_planted": true,
+        "bomb_possession_at_start": true,
+        "picked_up_bomb": true
+    },
+    "language": "en",
+    "bomb_reminder_delay": 15
+}
