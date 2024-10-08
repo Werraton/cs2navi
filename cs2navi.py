@@ -9,7 +9,7 @@ import shutil
 import numpy as np
 import sys
 
-# ASCII-taidetta
+# ASCII Art
 ascii_art = """
  ░▒▓██████▓▒░   ░▒▓███████▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░   ░▒▓██████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░ 
 ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░               ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░ 
@@ -22,21 +22,21 @@ ascii_art = """
                     By Werraton                            
 """
 
-# Funktio resurssipolun hakemiseen
+# Function to get the absolute path to resources
 def resource_path(relative_path):
-    """ Hakee absoluuttisen polun resurssille, toimii kehityksessä ja PyInstallerissa """
+    """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
-        # PyInstaller luo väliaikaisen kansion ja tallentaa polun _MEIPASS-muuttujaan
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-# Oletusasetukset
+# Default settings
 default_settings = {
     "low_health_threshold": 30,
     "low_health_notification_delay": 2,
-    "ammo_threshold_percentage": 25,  # Oletus 25%
+    "ammo_threshold_percentage": 25,  # Default 25%
     "volume": 100,
     "max_plays": {
         "lowhp": 1,
@@ -44,7 +44,7 @@ default_settings = {
         "picked_up_kit": 1,
         "kits": 1,
         "no_kits": 1,
-        "bomb": 2  # Lisätty 2, jotta pommin muistutus sallitaan
+        "bomb": 2  # Added 2 to allow bomb reminders
     },
     "enabled_events": {
         "low_health": True,
@@ -54,13 +54,13 @@ default_settings = {
         "bomb_possession_at_start": True,
         "picked_up_bomb": True
     },
-    "bomb_reminder_delay": 15,  # Uusi asetus pommin muistutuksen viiveelle
+    "bomb_reminder_delay": 15,  # New setting for bomb reminder delay
     "language": "en",
     "custom_sounds_enabled": False,
     "custom_sound_folder": ""
 }
 
-# Funktio asetusten yhdistämiseen
+# Function to merge default and loaded settings
 def merge_settings(defaults, loaded):
     for key, value in defaults.items():
         if isinstance(value, dict):
@@ -72,16 +72,16 @@ def merge_settings(defaults, loaded):
             loaded.setdefault(key, value)
     return loaded
 
-# Ladataan asetukset tiedostosta tai käytetään oletusasetuksia
+# Load settings from file or use defaults
 config_path = resource_path(os.path.join("conf-settings", "settings.json"))
 if os.path.exists(config_path):
     with open(config_path, 'r') as f:
         try:
             loaded_settings = json.load(f)
             print("[DEBUG] Loaded custom settings from file.")
-            # Yhdistetään ladatut asetukset oletusasetuksiin
+            # Merge loaded settings with defaults
             custom_settings = merge_settings(default_settings, loaded_settings)
-            # Tallennetaan yhdistetyt asetukset takaisin tiedostoon, jos uusia avaimia lisättiin
+            # Save merged settings back to file if new keys were added
             with open(config_path, 'w') as fw:
                 json.dump(custom_settings, fw, indent=4)
                 print("[DEBUG] Updated settings.json with any new default settings.")
@@ -120,42 +120,50 @@ wav_files = {
     }
 }
 
+# Custom sound files always in English
+custom_wav_files = {
+    "lowhp": "lowhp.wav",
+    "lowbullets": "lowbullets.wav",
+    "picked_up_kit": "kits.wav",
+    "kits": "kits.wav",
+    "no_kits": "no_kits.wav",
+    "bomb": "bomb.wav"
+}
+
 def check_files(language):
     custom_folder = custom_settings.get("custom_sound_folder", "")
-    custom_files_used = []
-    default_files_used = []
-
-    # Tarkistetaan ja käytetään custom-äänet vain niille, jotka löytyvät englanninkielisillä nimillä
+    
     if custom_settings.get("custom_sounds_enabled", False) and os.path.isdir(custom_folder):
-        for key, filename in wav_files['en'].items():  # Tarkista englanninkieliset nimikkeet
+        print("Checking for custom sound files..." if language == 'en' else "Tarkistetaan custom-äänitiedostot...")
+        custom_files_used = []
+        default_files_used = []
+        for key, filename in custom_wav_files.items():  # Use English filenames for custom sounds
             custom_path = os.path.join(custom_folder, filename)
             if os.path.exists(custom_path):
-                wav_files[language][key] = custom_path  # Korvataan vain löytyneet custom-äänet
+                wav_files[language][key] = custom_path  # Replace with found custom sounds
                 custom_files_used.append(custom_path)
             else:
-                # Jos custom-tiedosto puuttuu, käytetään valitun kielen mukaista oletustiedostoa
+                # If custom file is missing, use the default sound based on the selected language
                 default_path = resource_path(os.path.join(f"{language}-wav", filename))
-                wav_files[language][key] = default_path  # Käytetään oletuskansiota puuttuville
+                wav_files[language][key] = default_path  # Use default directory for missing
                 default_files_used.append(default_path)
+        
+        # Notify which custom sounds are in use
+        if custom_files_used:
+            print("Custom sound files in use:" if language == 'en' else "Käytössä olevat custom-äänitiedostot:")
+            for file in custom_files_used:
+                print(f" - {file}")
+        # Notify which default sounds are in use due to missing custom sounds
+        if default_files_used:
+            print("Default sound files in use due to missing custom sounds:" if language == 'en' else "Oletusäänet käytössä, koska vastaavia custom-äänitiedostoja ei löytynyt:")
+            for file in default_files_used:
+                print(f" - {file}")
+        
+        input("Press Enter to continue..." if language == 'en' else "Paina Enter jatkaaksesi...")
     else:
-        # Käytetään oletusääniä, jos custom-äänet eivät ole käytössä tai kansio ei ole validi
-        for key, filename in wav_files[language].items():
-            default_path = resource_path(os.path.join(f"{language}-wav", filename))
-            wav_files[language][key] = default_path
-            default_files_used.append(default_path)
-
-    # Ilmoitetaan, mitkä custom-äänet ovat käytössä
-    if custom_files_used:
-        print("The following custom sound files were found and are in use:" if language == 'en' else "Seuraavat custom-äänitiedostot löytyivät ja ovat käytössä:")
-        for file in custom_files_used:
-            print(f" - {file}")
-    # Ilmoitetaan, mitkä oletusäänet ovat käytössä, koska vastaavia custom-ääniä ei löytynyt
-    if default_files_used:
-        print("The following default sound files are in use due to missing custom sounds:" if language == 'en' else "Seuraavat oletusäänitiedostot ovat käytössä puuttuvien custom-äänien vuoksi:")
-        for file in default_files_used:
-            print(f" - {file}")
-
-    input("Press Enter to continue..." if language == 'en' else "Paina Enter jatkaaksesi...")
+        # If custom sounds are not enabled, inform the user that default sounds are being used
+        print("Using default sound files." if language == 'en' else "Käytetään oletusäänitiedostoja.")
+    
     print("[DEBUG] All required files are present.")
 
 app = Flask(__name__)
@@ -166,62 +174,61 @@ def play_sound(sound_key):
     try:
         print(f"[DEBUG] Attempting to play sound for key: {sound_key}")
         filename = wav_files[language][sound_key]
+
+        # Use custom sound if enabled
         if custom_settings.get("custom_sounds_enabled", False):
-            custom_folder = custom_settings.get("custom_sound_folder", "")
-            sound_file = os.path.join(custom_folder, filename)
-            if not os.path.exists(sound_file):
-                print(f"[ERROR] Custom sound file does not exist: {sound_file}. Using default sound.")
-                sound_file = resource_path(os.path.join(f"{language}-wav", filename))
+            sound_file = filename  # Custom sounds are already set in wav_files[language][key]
         else:
             sound_file = resource_path(os.path.join(f"{language}-wav", filename))
+
         if not os.path.exists(sound_file):
             print(f"[ERROR] Sound file does not exist: {sound_file}")
             return
 
-        # Ladataan WAV-tiedosto
+        # Load WAV file
         wave_obj = sa.WaveObject.from_wave_file(sound_file)
-        # Säädetään äänenvoimakkuus
-        volume = custom_settings.get('volume', 100) / 100  # Äänenvoimakkuuden asteikko
+        # Adjust volume
+        volume = custom_settings.get('volume', 100) / 100  # Volume scale
         audio_data = wave_obj.audio_data
         sample_rate = wave_obj.sample_rate
         num_channels = wave_obj.num_channels
         bytes_per_sample = wave_obj.bytes_per_sample
 
-        # Muunnetaan tavut numpy-taulukoksi
+        # Convert bytes to numpy array
         dtype_map = {1: np.int8, 2: np.int16, 4: np.int32}
         dtype = dtype_map.get(bytes_per_sample, np.int16)
         audio_array = np.frombuffer(audio_data, dtype=dtype)
 
-        # Säädetään äänenvoimakkuus
+        # Adjust volume
         audio_array = (audio_array * volume).astype(dtype)
 
-        # Muunnetaan takaisin tavuiksi
+        # Convert back to bytes
         adjusted_audio = audio_array.tobytes()
 
-        # Luodaan uusi WaveObject säädetyllä äänellä
+        # Create new WaveObject with adjusted audio
         adjusted_wave_obj = sa.WaveObject(
             adjusted_audio, num_channels, bytes_per_sample, sample_rate)
 
-        # Soitetaan ääni
+        # Play sound
         play_obj = adjusted_wave_obj.play()
         play_obj.wait_done()
         print(f"[DEBUG] Sound played: {sound_file}")
     except Exception as e:
         print(f"[ERROR] Error playing sound {sound_key}: {e}")
 
-# Alustetaan äänien toistokerrat
+# Initialize sound play counts
 sound_play_count = {key: 0 for key in custom_settings["max_plays"].keys()}
 low_health_start_time = None
 last_low_ammo_time = datetime.datetime.min
 
-# Muuttujat tilan seurantaan
+# Variables to track state
 had_bomb = False
 bomb_planted = False
 had_defuse_kit = False
-player_alive = True  # Pelaajan elossaolo
-bomb_acquired_time = None  # Aika, jolloin pommi saatiin haltuun
+player_alive = True  # Player's alive status
+bomb_acquired_time = None  # Time when bomb was acquired
 
-# Aseiden maksimipanokset
+# Weapon maximum ammo counts
 weapon_max_ammo = {
     'weapon_glock': 20,
     'weapon_hkp2000': 13,
@@ -259,7 +266,7 @@ weapon_max_ammo = {
     'weapon_scar20': 20
 }
 
-# Aseet, jotka eivät käytä panoksia
+# Weapons that do not use ammo
 non_ammo_weapons = [
     'weapon_knife',
     'weapon_knife_t',
@@ -302,7 +309,7 @@ def gamestate():
             player_alive = False
             return 'OK', 200
         else:
-            # Päivitetään pelaajan elossaolo
+            # Update player's alive status
             if health > 0:
                 if not player_alive:
                     print("[DEBUG] Player has respawned.")
@@ -320,7 +327,7 @@ def gamestate():
 
         if player_alive:
 
-            # Käsitellään matala terveys
+            # Handle low health
             if custom_settings['enabled_events'].get('low_health', True):
                 if health < custom_settings['low_health_threshold']:
                     if not low_health_start_time:
@@ -340,22 +347,22 @@ def gamestate():
                         print("[DEBUG] Health restored. Resetting timer.")
                     low_health_start_time = None
 
-            # Käsitellään vähäiset panokset
+            # Handle low ammo
             if custom_settings['enabled_events'].get('low_ammo', True):
                 if (now - last_low_ammo_time).total_seconds() > 5:
                     for weapon in weapons.values():
                         weapon_name = weapon.get('name', '')
                         if weapon_name in non_ammo_weapons:
                             print(f"[DEBUG] Skipping non-ammo weapon: {weapon_name}")
-                            continue  # Ohitetaan aseet, jotka eivät käytä panoksia
+                            continue  # Skip weapons that do not use ammo
 
                         ammo_clip = weapon.get('ammo_clip', 0)
                         max_ammo = weapon_max_ammo.get(weapon_name, 0)
                         if max_ammo == 0:
                             print(f"[DEBUG] Max ammo not defined for weapon: {weapon_name}")
-                            continue  # Ohitetaan, jos maksimipanokset eivät ole määritelty
+                            continue  # Skip if max ammo is not defined
 
-                        # Lasketaan raja prosenttiosuuden perusteella
+                        # Calculate threshold based on percentage
                         ammo_threshold_percentage = custom_settings.get(
                             'ammo_threshold_percentage', 25)
                         threshold = int((max_ammo * ammo_threshold_percentage) / 100)
@@ -371,16 +378,16 @@ def gamestate():
                                 last_low_ammo_time = now
                             else:
                                 print("[DEBUG] Low bullets sound play count reached.")
-                            break  # Soitetaan ääni ensimmäiselle aseelle, joka täyttää ehdon
+                            break  # Play sound for the first weapon that meets the condition
 
-            # Käsitellään pommin hallussapito alussa tai pommin poimiminen
+            # Handle bomb possession
             has_bomb = any(weapon.get('name') == 'weapon_c4' for weapon in weapons.values())
 
             if has_bomb:
                 if not had_bomb:
                     bomb_acquired_time = time.time()
                     if round_data.get('phase') == 'freezetime':
-                        # Pommi hallussa alussa
+                        # Bomb possessed at the start
                         if custom_settings['enabled_events'].get('bomb_possession_at_start', True):
                             if sound_play_count['bomb'] < custom_settings['max_plays']['bomb']:
                                 print("[DEBUG] Player has the bomb at round start. Playing bomb sound.")
@@ -389,7 +396,7 @@ def gamestate():
                             else:
                                 print("[DEBUG] Bomb sound play count reached.")
                     else:
-                        # Pommi poimittu maasta
+                        # Bomb picked up from the ground
                         if custom_settings['enabled_events'].get('picked_up_bomb', True):
                             if sound_play_count['bomb'] < custom_settings['max_plays']['bomb']:
                                 print("[DEBUG] Player picked up the bomb. Playing bomb sound.")
@@ -398,7 +405,7 @@ def gamestate():
                             else:
                                 print("[DEBUG] Bomb sound play count reached.")
                 else:
-                    # Tarkistetaan, pitäisikö muistutus soittaa
+                    # Check if bomb reminder should be played
                     bomb_reminder_delay = custom_settings.get('bomb_reminder_delay', 15)
                     if bomb_acquired_time and (time.time() - bomb_acquired_time >= bomb_reminder_delay) and has_bomb:
                         if sound_play_count['bomb'] < custom_settings['max_plays']['bomb']:
@@ -406,15 +413,15 @@ def gamestate():
                             play_sound('bomb')
                             sound_play_count['bomb'] += 1
                             if sound_play_count['bomb'] >= custom_settings['max_plays']['bomb']:
-                                bomb_acquired_time = None  # Nollataan, jotta ei toisteta enää
+                                bomb_acquired_time = None  # Reset to prevent further reminders
                         else:
                             print("[DEBUG] Bomb sound play count reached.")
                 had_bomb = True
             else:
-                had_bomb = False  # Nollataan, jos pelaaja menettää pommin
-                bomb_acquired_time = None  # Nollataan pommin hallussapidon aika
+                had_bomb = False  # Reset if the player loses the bomb
+                bomb_acquired_time = None  # Reset bomb possession time
 
-            # Käsitellään defuse kitin hankkiminen
+            # Handle defuse kit acquisition
             has_defuse_kit = player_state.get('defusekit', False)
             if has_defuse_kit and not had_defuse_kit:
                 if custom_settings['enabled_events'].get('picked_up_kit', True):
@@ -426,15 +433,15 @@ def gamestate():
                         print("[DEBUG] picked_up_kit sound play count reached.")
                 had_defuse_kit = True
             elif not has_defuse_kit:
-                had_defuse_kit = False  # Nollataan, jos pelaaja menettää kitin
+                had_defuse_kit = False  # Reset if the player loses the kit
 
-            # Käsitellään vihollisen asettama pommi
+            # Handle enemy plant of the bomb
             bomb_state = round_data.get('bomb')
             player_team = game_state.get('team')
             if bomb_state == 'planted' and not bomb_planted:
-                # Tarkistetaan, että pelaaja on elossa ja CT-tiimissä
+                # Ensure the player is alive and on the CT team
                 if health > 0 and player_team == 'CT':
-                    # Tarkistetaan, onko pelaajalla defuse kit
+                    # Check if the player has a defuse kit
                     has_defuse_kit = player_state.get('defusekit', False)
                     sound_key = 'kits' if has_defuse_kit else 'no_kits'
                     if custom_settings['enabled_events'].get('kits_when_bomb_planted', True):
@@ -451,7 +458,7 @@ def gamestate():
                     print("[DEBUG] Bomb planted but player is not on CT team or is dead. No sound played.")
                 bomb_planted = True
             elif bomb_state != 'planted':
-                bomb_planted = False  # Nollataan, jos pommi ei ole asetettu
+                bomb_planted = False  # Reset if the bomb is not planted
 
         else:
             print("[DEBUG] Player is dead. Skipping notifications.")
@@ -472,8 +479,8 @@ def reset_play_counts():
     last_low_ammo_time = datetime.datetime.min
     had_bomb = False
     bomb_planted = False
-    had_defuse_kit = False  # Nollataan defuse kitin seuranta
-    bomb_acquired_time = None  # Nollataan pommin hallussapidon aika
+    had_defuse_kit = False  # Reset defuse kit tracking
+    bomb_acquired_time = None  # Reset bomb possession time
     print("[DEBUG] Reset sound play counts and timers.")
 
 def change_language(lang):
@@ -508,7 +515,7 @@ def validate_settings(settings):
         for key, value in settings['enabled_events'].items():
             assert isinstance(value, bool), \
                 f"enabled_events['{key}'] must be a boolean"
-        # Tarkistetaan custom-äänien asetukset
+        # Check custom sound settings
         assert isinstance(settings.get('custom_sounds_enabled', False), bool), \
             "custom_sounds_enabled must be a boolean"
         if settings.get('custom_sounds_enabled', False):
@@ -540,10 +547,10 @@ def main_menu():
             print("  1. Kielen valinta")
             print("  2. Kustomointi")
             print("  3. Valitse toistettavat tapahtumat")
-            print("  4. Conffin kopiointi")
+            print("  4. Copy config file")
             print("  5. Aloita ohjelma")
             print("  6. Tietoa ohjelmasta")
-            print("  7. Valitse Custom Äänet")
+            print("  7. Toggle Custom Sounds")
             print("  8. Poistu")
             choice = input("Valitse vaihtoehto (1-8): ")
 
@@ -589,14 +596,15 @@ def language_selection():
     if previous_language != language:
         print(f"Language changed to: {language}" if language == 'en'
               else f"Kieli vaihdettu: {language}")
-        custom_settings['language'] = language  # Tallennetaan kieliasetus
+        custom_settings['language'] = language  # Save language setting
         with open(config_path, 'w') as f:
             json.dump(custom_settings, f, indent=4)
         print("Language preference saved." if language == 'en' else "Kieliasetus tallennettu.")
     else:
         print("Language unchanged." if language == 'en' else "Kieli ei muuttunut.")
 
-    input("Press Enter to continue..." if language == 'en' else "Paina Enter jatkaaksesi...")
+    input("Press Enter to continue..." if language == 'en'
+          else "Paina Enter jatkaaksesi...")
 
 def get_input(prompt, default, current, expected_type='int', choices=None):
     if expected_type == 'int':
@@ -725,7 +733,7 @@ def choose_events():
         choice = input("Your choice: " if language == 'en'
                        else "Valintasi: ")
         if choice == '0':
-            # Tallennetaan asetukset ja palataan päävalikkoon
+            # Save settings and return to main menu
             with open(config_path, 'w') as f:
                 json.dump(custom_settings, f, indent=4)
             break
@@ -791,6 +799,25 @@ def toggle_custom_sounds():
     global custom_settings
     status = "enabled" if custom_settings.get("custom_sounds_enabled", False) else "disabled"
     print(f"Custom sounds are currently {status}." if language == 'en' else f"Custom-äänet ovat nyt {status}.")
+
+    # Add message informing user of required files for custom sounds
+    if language == 'en':
+        print("To replace default sounds, place these files in the custom folder:\n"
+              " - lowhp.wav\n"
+              " - lowbullets.wav\n"
+              " - kits.wav\n"
+              " - no_kits.wav\n"
+              " - bomb.wav\n"
+              "Files should be in .wav format.")
+    else:
+        print("Korvataksesi oletusäänet, laita seuraavat tiedostot custom-kansioon:\n"
+              " - lowhp.wav\n"
+              " - lowbullets.wav\n"
+              " - kits.wav\n"
+              " - no_kits.wav\n"
+              " - bomb.wav\n"
+              "Tiedostojen on oltava .wav-muodossa.")
+
     choice = input("Enable custom sounds? (y/n): " if language == 'en' else "Ota käyttöön custom-äänet? (k/e): ")
     if choice.lower() in ['y', 'k']:
         custom_folder = input("Enter custom sound folder path: " if language == 'en' else "Anna custom-äänikansion polku: ")
@@ -803,7 +830,8 @@ def toggle_custom_sounds():
     else:
         custom_settings["custom_sounds_enabled"] = False
         print("[DEBUG] Custom sounds disabled.")
-    # Tallenna asetukset
+    
+    # Save settings
     with open(config_path, 'w') as f:
         json.dump(custom_settings, f, indent=4)
     print("Settings saved." if language == 'en' else "Asetukset tallennettu.")
@@ -831,7 +859,7 @@ Koodattu Pythonille.
           else "Paina Enter palataksesi päävalikkoon.")
 
 if __name__ == '__main__':
-    # Validoidaan asetukset
+    # Validate settings
     try:
         validate_settings(custom_settings)
     except ValueError as e:
@@ -841,5 +869,5 @@ if __name__ == '__main__':
         language = 'en'
         with open(config_path, 'w') as f:
             json.dump(custom_settings, f, indent=4)
-    # Aloitetaan päävalikko
+    # Start main menu
     main_menu()
