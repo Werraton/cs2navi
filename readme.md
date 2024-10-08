@@ -25,17 +25,17 @@
 1. Clone this repository:
    ```bash
    git clone https://github.com/Werraton/cs2navi.git
-Install the dependencies:
 
-bash
-Copy code
-pip install -r requirements.txt
-Run the program:
+2. Install the dependencies:
+   ```bash
+   pip install -r requirements.txt
 
-bash
-Copy code
-python cs2navi.py
-Executable Version
+3. Run the program:
+
+   ```bash
+   python cs2navi.py
+
+Executable Version:
 For those who prefer not to run the code from Python, a .exe file is available on the releases page. Place it in your desired folder, ensure the necessary configuration is in place (see below), and run it directly.
 
 <span style="color:#ff4500">Usage</span>
@@ -86,15 +86,15 @@ https://github.com/Werraton/cs2navi
    git clone https://github.com/Werraton/cs2navi.git
 Asenna riippuvuudet:
 
-bash
-Copy code
-pip install -r requirements.txt
-Suorita ohjelma:
+   ```bash
+   pip install -r requirements.txt
 
-bash
-Copy code
-python cs2navi.py
-Suoritettava versio
+2. Suorita ohjelma:
+
+   ```bash
+   python cs2navi.py
+
+Suoritettava versio:
 Jos et halua ajaa ohjelmaa Pythonista, voit ladata .exe-tiedoston releases-sivulta. Sijoita se haluamaasi kansioon, varmista, että tarvittavat asetukset ovat paikoillaan (katso alla), ja suorita ohjelma suoraan.
 
 <span style="color:#ff4500">Käyttö</span>
