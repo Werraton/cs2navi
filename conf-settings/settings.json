@@ -24,6 +24,13 @@
         "bomb_possession_at_start": true,
         "picked_up_bomb": true
     },
-    "language": "en",
-    "bomb_reminder_delay": 15
+    "language": "fi",
+    "bomb_reminder_delay": 25,
+    "custom_sounds_enabled": false,
+    "custom_sound_folder": "d:\\custom",
+    "weapon_accuracy_feedback": {
+        "deagle": true,
+        "xm1014": true
+    },
+    "steady_shot_sound": "steady_shot.wav"
 }

@@ -84,12 +84,13 @@ https://github.com/Werraton/cs2navi
 1. Kloonaa tämä repositorio:
    ```bash
    git clone https://github.com/Werraton/cs2navi.git
-Asenna riippuvuudet:
+
+2. Asenna riippuvuudet:
 
    ```bash
    pip install -r requirements.txt
 
-2. Suorita ohjelma:
+3. Suorita ohjelma:
 
    ```bash
    python cs2navi.py
