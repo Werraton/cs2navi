@@ -57,7 +57,12 @@ default_settings = {
     "bomb_reminder_delay": 15,  # New setting for bomb reminder delay
     "language": "en",
     "custom_sounds_enabled": False,
-    "custom_sound_folder": ""
+    "custom_sound_folder": "",
+    "weapon_accuracy_feedback": {
+        "deagle": True,
+        "xm1014": True
+    },
+    "steady_shot_sound": "steady_shot.wav"
 }
 
 # Function to merge default and loaded settings
@@ -108,7 +113,8 @@ wav_files = {
         "picked_up_kit": "kits.wav",
         "kits": "kits.wav",
         "no_kits": "no_kits.wav",
-        "bomb": "bomb.wav"
+        "bomb": "bomb.wav",
+        "steady_shot": custom_settings.get('steady_shot_sound', 'steady_shot.wav')
     },
     "fi": {
         "lowhp": "matala_hp.wav",
@@ -116,7 +122,8 @@ wav_files = {
         "picked_up_kit": "kitit.wav",
         "kits": "kitit.wav",
         "no_kits": "ei_kitteja.wav",
-        "bomb": "pommi.wav"
+        "bomb": "pommi.wav",
+        "steady_shot": custom_settings.get('steady_shot_sound', 'steady_shot.wav')
     }
 }
 
@@ -127,7 +134,8 @@ custom_wav_files = {
     "picked_up_kit": "kits.wav",
     "kits": "kits.wav",
     "no_kits": "no_kits.wav",
-    "bomb": "bomb.wav"
+    "bomb": "bomb.wav",
+    "steady_shot": custom_settings.get('steady_shot_sound', 'steady_shot.wav')
 }
 
 def check_files(language):
@@ -228,6 +236,13 @@ had_defuse_kit = False
 player_alive = True  # Player's alive status
 bomb_acquired_time = None  # Time when bomb was acquired
 
+# Variables to track weapon firing
+weapon_last_shot_time = {
+    'weapon_deagle': None,
+    'weapon_xm1014': None
+}
+previous_ammo_clip = {}
+
 # Weapon maximum ammo counts
 weapon_max_ammo = {
     'weapon_glock': 20,
@@ -291,6 +306,7 @@ non_ammo_weapons = [
 def gamestate():
     global last_low_ammo_time, low_health_start_time, sound_play_count
     global had_bomb, bomb_planted, had_defuse_kit, player_alive, bomb_acquired_time
+    global weapon_last_shot_time, previous_ammo_clip
     try:
         data = request.json
         print("[DEBUG] Received gamestate data.")
@@ -350,7 +366,7 @@ def gamestate():
             # Handle low ammo
             if custom_settings['enabled_events'].get('low_ammo', True):
                 if (now - last_low_ammo_time).total_seconds() > 5:
-                    for weapon in weapons.values():
+                    for weapon_id, weapon in weapons.items():
                         weapon_name = weapon.get('name', '')
                         if weapon_name in non_ammo_weapons:
                             print(f"[DEBUG] Skipping non-ammo weapon: {weapon_name}")
@@ -379,6 +395,34 @@ def gamestate():
                             else:
                                 print("[DEBUG] Low bullets sound play count reached.")
                             break  # Play sound for the first weapon that meets the condition
+
+            # Handle weapon accuracy feedback
+            for weapon_id, weapon in weapons.items():
+                weapon_name = weapon.get('name', '')
+                if weapon_name not in ['weapon_deagle', 'weapon_xm1014']:
+                    continue  # Only interested in Desert Eagle and XM1014
+
+                setting_key = 'deagle' if weapon_name == 'weapon_deagle' else 'xm1014'
+                if not custom_settings['weapon_accuracy_feedback'].get(setting_key, False):
+                    continue  # Skip if feedback is disabled for this weapon
+
+                ammo_clip = weapon.get('ammo_clip', 0)
+                previous_clip = previous_ammo_clip.get(weapon_id, ammo_clip)
+                previous_ammo_clip[weapon_id] = ammo_clip  # Update ammo clip for next check
+
+                if ammo_clip < previous_clip:
+                    # Player fired a shot
+                    current_time = time.time()
+                    last_shot_time = weapon_last_shot_time.get(weapon_name, None)
+                    required_delay = 0.55 if weapon_name == 'weapon_deagle' else 0.35
+
+                    if last_shot_time:
+                        time_since_last_shot = current_time - last_shot_time
+                        print(f"[DEBUG] Time since last shot for {weapon_name}: {time_since_last_shot}s")
+                        if time_since_last_shot < required_delay:
+                            print(f"[DEBUG] Firing too quickly with {weapon_name}. Playing steady_shot sound.")
+                            play_sound('steady_shot')
+                    weapon_last_shot_time[weapon_name] = current_time
 
             # Handle bomb possession
             has_bomb = any(weapon.get('name') == 'weapon_c4' for weapon in weapons.values())
@@ -473,6 +517,7 @@ def gamestate():
 def reset_play_counts():
     global low_health_start_time, last_low_ammo_time, sound_play_count
     global had_bomb, bomb_planted, had_defuse_kit, bomb_acquired_time
+    global weapon_last_shot_time, previous_ammo_clip
     for key in sound_play_count.keys():
         sound_play_count[key] = 0
     low_health_start_time = None
@@ -481,6 +526,11 @@ def reset_play_counts():
     bomb_planted = False
     had_defuse_kit = False  # Reset defuse kit tracking
     bomb_acquired_time = None  # Reset bomb possession time
+    weapon_last_shot_time = {
+        'weapon_deagle': None,
+        'weapon_xm1014': None
+    }
+    previous_ammo_clip = {}
     print("[DEBUG] Reset sound play counts and timers.")
 
 def change_language(lang):
@@ -515,6 +565,14 @@ def validate_settings(settings):
         for key, value in settings['enabled_events'].items():
             assert isinstance(value, bool), \
                 f"enabled_events['{key}'] must be a boolean"
+        # Check weapon_accuracy_feedback settings
+        assert isinstance(settings['weapon_accuracy_feedback'], dict), \
+            "weapon_accuracy_feedback must be a dictionary"
+        for key, value in settings['weapon_accuracy_feedback'].items():
+            assert key in ['deagle', 'xm1014'], \
+                f"Invalid weapon key in weapon_accuracy_feedback: {key}"
+            assert isinstance(value, bool), \
+                f"weapon_accuracy_feedback['{key}'] must be a boolean"
         # Check custom sound settings
         assert isinstance(settings.get('custom_sounds_enabled', False), bool), \
             "custom_sounds_enabled must be a boolean"
@@ -624,6 +682,20 @@ def get_input(prompt, default, current, expected_type='int', choices=None):
             print("Invalid input. Keeping current value." if language == 'en'
                   else "Virheellinen syöte. Säilytetään nykyinen arvo.")
             return current
+    elif expected_type == 'bool':
+        value = input(f"{prompt} (y/n) default: {'y' if default else 'n'}, current: {'y' if current else 'n'}: "
+                      if language == 'en'
+                      else f"{prompt} (k/e) vakio: {'k' if default else 'e'}, nykyinen: {'k' if current else 'e'}: ")
+        if value.strip() == "":
+            return current
+        if value.lower() in ['y', 'k']:
+            return True
+        elif value.lower() in ['n', 'e']:
+            return False
+        else:
+            print("Invalid input. Keeping current value." if language == 'en'
+                  else "Virheellinen syöte. Säilytetään nykyinen arvo.")
+            return current
     else:
         return current
 
@@ -672,6 +744,19 @@ def customize_settings():
             default_settings['max_plays'][key],
             custom_settings['max_plays'][key],
             expected_type='int'
+        )
+
+    # Customize weapon accuracy feedback
+    print("\nWeapon Accuracy Feedback Settings:" if language == 'en'
+          else "\nAseen Tarkkuuspalautteen Asetukset:")
+    for key in settings['weapon_accuracy_feedback']:
+        current = settings['weapon_accuracy_feedback'][key]
+        prompt = f"Enable accuracy feedback for {key}? (y/n)" if language == 'en' else f"Ota käyttöön tarkkuuspalautetta aseelle {key}? (k/e)"
+        settings['weapon_accuracy_feedback'][key] = get_input(
+            prompt,
+            default_settings['weapon_accuracy_feedback'][key],
+            current,
+            expected_type='bool'
         )
 
     try:
@@ -808,6 +893,7 @@ def toggle_custom_sounds():
               " - kits.wav\n"
               " - no_kits.wav\n"
               " - bomb.wav\n"
+              " - steady_shot.wav\n"
               "Files should be in .wav format.")
     else:
         print("Korvataksesi oletusäänet, laita seuraavat tiedostot custom-kansioon:\n"
@@ -816,6 +902,7 @@ def toggle_custom_sounds():
               " - kits.wav\n"
               " - no_kits.wav\n"
               " - bomb.wav\n"
+              " - steady_shot.wav\n"
               "Tiedostojen on oltava .wav-muodossa.")
 
     choice = input("Enable custom sounds? (y/n): " if language == 'en' else "Ota käyttöön custom-äänet? (k/e): ")
