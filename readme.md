@@ -9,6 +9,7 @@
 ## <span style="color:#00ff00">Features</span>
 
 - **Alerts** when you pick up the bomb or defuse kit.
+- **Alerts** when shooting too fast with XM or Deagle.
 - **Warnings** for low health or low ammo.
 - Provides **feedback** on bomb status and defuse kit possession when the bomb is planted.
 - **Bilingual Support**: Defaults to English, switchable to Finnish.
@@ -68,6 +69,7 @@ https://github.com/Werraton/cs2navi
 ## <span style="color:#00ff00">Ominaisuudet</span>
 
 - **Ilmoitukset** pommin tai defusointikitin noutamisesta.
+- **Ilmoitukset** antaa äänimerkin, kun ammutaan liian nopeast XM tai Deagle aseilla.
 - **Varoitukset** alhaisesta terveydestä tai vähistä ammuksista.
 - Tarjoaa **palautetta** pommin tilasta ja siitä, onko sinulla defusointikitti, kun pommi on asetettu.
 - **Kaksikielinen tuki**: Oletuskieli on englanti, mutta voit vaihtaa kielen suomeksi.
